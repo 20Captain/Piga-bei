@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="sw"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kombe la Mtaa</title>
+<style>
+:root{--g:#1c6b38;--y:#f2c230;--k:#0d0d0d;--w:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0;background:#0d0d0d;color:#fff;font-family:"Arial Black",Impact,system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+body{display:flex;flex-direction:column;align-items:center}
+#wrap{position:relative;width:min(100vw,calc((100dvh - 215px)*1.538));margin-top:4px}
+canvas{width:100%;display:block;border-radius:6px}
+#ui{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(13,13,13,.92);text-align:center;padding:10px;overflow:auto;border-radius:6px}
+h1{margin:0;font-size:clamp(26px,6vw,44px);color:#f2c230;letter-spacing:1px}h2{margin:0;font-size:18px;color:#f2c230}
+.b,.b2{border:0;border-radius:6px;padding:10px 16px;font:inherit;font-size:15px;cursor:pointer;text-decoration:none;display:inline-block;margin:2px}
+.b{background:#f2c230;color:#0d0d0d}.b2{background:#2a2a2a;color:#fff;font-size:13px}
+input{font:inherit;padding:9px;border-radius:6px;border:2px solid #f2c230;background:#0d0d0d;color:#fff;text-align:center;width:min(240px,70%)}
+.s{font:12px system-ui,sans-serif;margin:0;color:#bbb;max-width:340px}
+ol{margin:0;padding:0;list-style:none;font:13px system-ui,sans-serif;min-width:200px}li{display:flex;justify-content:space-between;padding:2px 8px;border-bottom:1px solid #333}li.me{color:#f2c230;font-weight:700}
+#cm{min-height:38px;max-width:min(100vw,720px);padding:6px 12px;font:15px system-ui,sans-serif;text-align:center;color:#f2c230}
+#ctl{display:flex;justify-content:space-between;align-items:center;width:min(100vw,720px);padding:0 18px 8px;box-sizing:border-box}
+#joy{width:120px;height:120px;border-radius:50%;border:3px solid #f2c230;display:flex;align-items:center;justify-content:center;touch-action:none}
+#knob{width:46px;height:46px;border-radius:50%;background:#f2c230;opacity:.85}
+#bb{display:flex;gap:14px}
+.rb{width:78px;height:78px;border-radius:50%;border:3px solid #f2c230;background:#1c6b38;color:#fff;font:inherit;font-size:12px;touch-action:none}
+.rb:active{background:#f2c230;color:#0d0d0d}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #fff;outline-offset:2px}
+</style></head><body>
+<div id="wrap"><canvas id="c" width="800" height="520"></canvas><div id="ui"></div></div>
+<div id="cm"></div>
+<div id="ctl"><div id="joy"><div id="knob"></div></div><div id="bb"><button id="br" class="rb"></button><button id="bs" class="rb"></button></div></div>
+<script>
+const $=i=>document.getElementById(i),cv=$('c'),g=cv.getContext('2d'),ui=$('ui');
+const W=800,H=520,X0=40,X1=760,Y0=60,Y1=460,GA=200,GB=320,CY=260;
+const LN={en:'🇬🇧 English',sw:'🇹🇿 Kiswahili',fr:'🇫🇷 Français',es:'🇪🇸 Español',ar:'🇸🇦 العربية',pt:'🇵🇹 Português'};
+const VL={en:'en-US',sw:'sw-KE',fr:'fr-FR',es:'es-ES',ar:'ar-SA',pt:'pt-BR'};
+// Kuongeza lugha: ongeza kitu kwenye LN, VL, L (na C kwa commentary). Isiyo kamili hutumia Kiingereza.
+const L={
+en:{t:'Kombe la Mtaa',play:'Play',mt:'Your neighbourhood',lb:'Neighbourhood table',sh:'SHOOT',ru:'RUN',wa:'Challenge on WhatsApp',ag:'Play again',w:'You win!',l:'You lose',d:'Draw',hint:'Move: joystick or WASD. Shoot: button or Space. Run: Shift.',lang:'Language',ex:'Mbuyu',pts:'pts'},
+sw:{t:'Kombe la Mtaa',play:'Cheza',mt:'Jina la mtaa wako',lb:'Msimamo wa mitaa',sh:'PIGA',ru:'KIMBIA',wa:'Mpe changamoto WhatsApp',ag:'Cheza tena',w:'Umeshinda!',l:'Umefungwa',d:'Sare',hint:'Tembea: joystick au WASD. Piga: kitufe au Space. Kimbia: Shift.',lang:'Lugha',ex:'Mbuyu',pts:'pointi'},
+fr:{play:'Jouer',mt:'Ton quartier',lb:'Classement des quartiers',sh:'TIRER',ru:'COURIR',wa:'Défier sur WhatsApp',ag:'Rejouer',w:'Tu gagnes !',l:'Tu perds',d:'Match nul',lang:'Langue'},
+es:{play:'Jugar',mt:'Tu barrio',lb:'Tabla de barrios',sh:'TIRAR',ru:'CORRER',wa:'Retar por WhatsApp',ag:'Jugar otra vez',w:'¡Ganaste!',l:'Perdiste',d:'Empate',lang:'Idioma'},
+ar:{play:'العب',mt:'اسم حيّك',lb:'ترتيب الأحياء',sh:'سدّد',ru:'اركض',wa:'تحدَّ عبر واتساب',ag:'العب مجددًا',w:'لقد فزت!',l:'لقد خسرت',d:'تعادل',lang:'اللغة'},
+pt:{play:'Jogar',mt:'Teu bairro',lb:'Tabela dos bairros',sh:'CHUTAR',ru:'CORRER',wa:'Desafiar no WhatsApp',ag:'Jogar de novo',w:'Você venceu!',l:'Você perdeu',d:'Empate',lang:'Idioma'}};
+const C={
+en:{ko:['And we are underway at the Mtaa pitch!','Kickoff! The whole street is watching.','The ball rolls and the battle begins!'],
+gm:['GOAL! What a strike, the crowd erupts!','He scores! The neighbourhood is dancing!','Into the net! Pure class!'],
+gc:['The CPU scores. Time to answer back!','Conceded! Heads up, keep fighting.','They found the net. We need a reply!'],
+sv:['Brilliant save by the keeper!','Denied! Big hands there.','The keeper stands tall!'],
+ms:['Wide! So close.','That one flew past the post.','Off target, what a chance.'],
+sh:['He shoots!','Here comes a strike!','Pulls the trigger!'],
+hf:['Halfway through. Everything is still open.','Midway point, the tempo is rising.','Second half energy now!'],
+w:['Full time. You win, the street is proud!','Victory! The Mtaa celebrates!','Final whistle: a famous win!'],
+l:['Full time. A loss, but come back stronger.','Beaten today, tomorrow is another day.','The whistle goes and the CPU wins.'],
+d:['Level at the end. Both sides fought hard.','A draw, nobody could break through.','Honours even at full time.']},
+sw:{ko:['Mchezo umeanza! Mtaa mzima unatazama.','Kipenga cha kwanza, vita imeanza!','Mpira unaanza kuzunguka uwanjani!'],
+gm:['GOOOLI! Shuti kali, mashabiki wanalipuka!','Ameupata mtandao! Mtaa unacheza ngoma!','Ndani! Goli safi kabisa!'],
+gc:['Wamefunga. Tujibu mara moja!','Tumefungwa! Pambana, mchezo bado.','Wamepata goli, tunahitaji jibu!'],
+sv:['Kipa ameokoa! Mikono ya chuma!','Kanyimwa! Uokoaji mkubwa.','Kipa amesimama imara!'],
+ms:['Nje! Karibu sana.','Mpira umepita pembeni ya mlingoti.','Shuti limekosa lengo, nafasi kubwa hiyo.'],
+sh:['Anapiga shuti!','Hapa kuna mkwaju!','Ameachia kombora!'],
+hf:['Nusu ya mchezo, bado kila kitu wazi.','Mapumziko yamefika, kasi inapanda!','Tupo katikati, mchezo unazidi kuwa moto.'],
+w:['Kipenga cha mwisho: umeshinda, mtaa una fahari!','Ushindi! Mtaa unasherehekea!','Mwisho wa mchezo: ushindi mkubwa!'],
+l:['Kipenga cha mwisho: umefungwa, rudi tena ukiwa na nguvu.','Umeshindwa leo, kesho ni siku nyingine.','Mchezo umeisha, mpinzani ameshinda.'],
+d:['Sare! Kila upande umepambana.','Mchezo umeisha kwa sare.','Hakuna mshindi leo, rudiana!']}};
+const tr=k=>(L[S.lang]&&L[S.lang][k])||L.en[k];
+const ld=()=>{try{return JSON.parse(localStorage.getItem('kml')||'{}')}catch(e){return{}}};
+const S=Object.assign({lang:'',mtaa:'',voice:0,board:{}},ld());
+const save=()=>{try{localStorage.setItem('kml',JSON.stringify(S))}catch(e){}};
+let me,ai,km,ka,ball,sc=[0,0],clk=0,half=0,st='menu',pause=0,shooter=null,shotT=0,crowd=0,tt=0,lastSay=-9;const LS={};
+const keys={},joy={x:0,y:0};let sb=0,rb=0;
+const mk=(x,y,fx)=>({x,y,vx:0,vy:0,fx,fy:0,cd:0,st:1});
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fans=[];for(let i=0;i<260;i++){const top=i%2;fans.push({x:8+Math.random()*784,y:top?6+Math.random()*44:470+Math.random()*44,c:['#f2c230','#fff','#2a9d8f','#e76f51','#264653'][i%5]})}
+function kick0(){me=mk(300,CY,1);ai=mk(500,CY,-1);km=mk(52,CY,1);ka=mk(748,CY,-1);ball={x:400,y:CY,vx:0,vy:0};shooter=null}
+function say(ev){const n=performance.now()/1000,big='gm gc w l d ko hf'.includes(ev);if(!big&&n-lastSay<2.5)return;
+ const pk=(C[S.lang]&&C[S.lang][ev])||C.en[ev];let i;do{i=Math.random()*pk.length|0}while(pk.length>1&&LS[ev]===i);LS[ev]=i;lastSay=n;
+ $('cm').textContent=pk[i];if(S.voice&&window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(pk[i]);u.lang=VL[S.lang];speechSynthesis.speak(u)}}
+addEventListener('keydown',e=>{keys[e.code]=1;if(e.code=='Space')e.preventDefault()});addEventListener('keyup',e=>{keys[e.code]=0});
+const J=$('joy'),K=$('knob');let jp=null;
+function mj(e){const r=J.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);const m=Math.hypot(x,y);if(m>1){x/=m;y/=m}joy.x=x;joy.y=y;K.style.transform=`translate(${x*34}px,${y*34}px)`}
+J.onpointerdown=e=>{jp=e.pointerId;J.setPointerCapture(jp);mj(e)};J.onpointermove=e=>{if(e.pointerId===jp)mj(e)};
+J.onpointerup=J.onpointercancel=()=>{jp=null;joy.x=joy.y=0;K.style.transform=''};
+$('bs').onpointerdown=()=>sb=1;$('bs').onpointerup=$('bs').onpointercancel=$('bs').onpointerleave=()=>sb=0;
+$('br').onpointerdown=()=>rb=1;$('br').onpointerup=$('br').onpointercancel=$('br').onpointerleave=()=>rb=0;
+function touch(p){const dx=ball.x-p.x,dy=ball.y-p.y,d=Math.hypot(dx,dy),R=22;if(d<R&&d>0){const nx=dx/d,ny=dy/d;ball.x=p.x+nx*R;ball.y=p.y+ny*R;
+ const rel=(ball.vx-p.vx)*nx+(ball.vy-p.vy)*ny;if(rel<0){ball.vx-=1.6*rel*nx;ball.vy-=1.6*rel*ny}ball.vx+=nx*25;ball.vy+=ny*25}}
+function hit(p,vx,vy){ball.vx=vx;ball.vy=vy;p.cd=.45;shooter=p;shotT=2}
+function keeper(k,dt,left){k.vy=cl((ball.y-k.y)*6,-150,150);k.y=cl(k.y+k.vy*dt,GA+16,GB-16);
+ const dx=ball.x-k.x,dy=ball.y-k.y,d=Math.hypot(dx,dy),R=26;
+ if(d<R&&d>0){const nx=dx/d,ny=dy/d,sp=Math.hypot(ball.vx,ball.vy);ball.x=k.x+nx*R;ball.y=k.y+ny*R;ball.vx=nx*Math.max(sp*.7,170);ball.vy=ny*Math.max(sp*.7,170)*.8+k.vy*.3;if(sp>240&&shooter&&shooter!==(left?km:ka))say('sv')}}
+function goal(w){sc[w]++;pause=2.2;crowd=2.2;say(w?'gc':'gm');if(w===0)say('gm')}
+function step(dt){
+ if(pause>0){pause-=dt;if(pause<=0)kick0();return}
+ clk+=dt*.75;if(clk>=90){finish();return}
+ if(!half&&clk>=45){half=1;say('hf')}
+ me.cd-=dt;ai.cd-=dt;shotT-=dt;crowd=Math.max(0,crowd-dt);
+ let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x,iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0)+joy.y;
+ const m=Math.hypot(ix,iy);if(m>1){ix/=m;iy/=m}
+ let sp=170;if((keys.ShiftLeft||keys.ShiftRight||rb)&&me.st>0){sp=235;me.st-=dt*.35}else me.st=Math.min(1,me.st+dt*.15);
+ me.vx=ix*sp;me.vy=iy*sp;if(m>.1){me.fx=ix/m;me.fy=iy/m}
+ me.x=cl(me.x+me.vx*dt,X0+14,X1-14);me.y=cl(me.y+me.vy*dt,Y0+14,Y1-14);
+ // AI
+ const d=Math.hypot(ball.x-ai.x,ball.y-ai.y),ux=ball.x-X0,uy=ball.y-CY,um=Math.hypot(ux,uy)||1;
+ const tx=d>34?ball.x+ux/um*24:X0,ty=d>34?ball.y+uy/um*24:CY,ad=Math.hypot(tx-ai.x,ty-ai.y)||1;
+ ai.vx=(tx-ai.x)/ad*148;ai.vy=(ty-ai.y)/ad*148;ai.fx=-1;
+ ai.x=cl(ai.x+ai.vx*dt,X0+14,X1-14);ai.y=cl(ai.y+ai.vy*dt,Y0+14,Y1-14);
+ touch(me);touch(ai);
+ if((sb||keys.Space)&&me.cd<=0&&Math.hypot(ball.x-me.x,ball.y-me.y)<36){
+  const gx=X1-me.x,gy=CY-me.y,gm=Math.hypot(gx,gy)||1;let dx=me.fx*.55+gx/gm*.45,dy=me.fy*.55+gy/gm*.45;const dm=Math.hypot(dx,dy)||1;
+  hit(me,dx/dm*430,dy/dm*430);say('sh')}
+ if(ai.cd<=0&&d<34&&ball.x<470&&Math.random()<.06){const ty2=GA+15+Math.random()*(GB-GA-30),dx=X0-ai.x,dy=ty2-ai.y,dm=Math.hypot(dx,dy);hit(ai,dx/dm*390,dy/dm*390)}
+ keeper(km,dt,1);keeper(ka,dt,0);
+ const sp2=Math.hypot(ball.vx,ball.vy);if(sp2>560){ball.vx*=560/sp2;ball.vy*=560/sp2}
+ ball.vx*=1-.8*dt;ball.vy*=1-.8*dt;ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;
+ if(ball.y<Y0+8){ball.y=Y0+8;ball.vy*=-.7}if(ball.y>Y1-8){ball.y=Y1-8;ball.vy*=-.7}
+ const inG=ball.y>GA&&ball.y<GB;
+ if(ball.x<X0+8){if(inG){if(ball.x<X0-6)goal(1)}else{ball.x=X0+8;if(shotT>0&&Math.abs(ball.vx)>250&&shooter===me){say('ms')}ball.vx*=-.7}}
+ if(ball.x>X1-8){if(inG){if(ball.x>X1+6)goal(0)}else{ball.x=X1-8;if(shotT>0&&Math.abs(ball.vx)>250&&shooter===me){say('ms')}ball.vx*=-.7}}
+}
+function pl(p,r,col,ring){g.fillStyle='rgba(0,0,0,.3)';g.beginPath();g.ellipse(p.x+3,p.y+5,r,r*.6,0,0,7);g.fill();g.fillStyle=col;g.beginPath();g.arc(p.x,p.y,r,0,7);g.fill();g.lineWidth=3;g.strokeStyle=ring;g.stroke();g.beginPath();g.moveTo(p.x,p.y);g.lineTo(p.x+p.fx*r,p.y+p.fy*r);g.strokeStyle='#fff';g.stroke()}
+function draw(){
+ g.fillStyle='#0d0d0d';g.fillRect(0,0,W,H);
+ const bob=crowd>0?1:0;for(const f of fans){g.fillStyle=f.c;g.fillRect(f.x,f.y-(bob?Math.abs(Math.sin(tt*9+f.x))*5:0),5,7)}
+ for(let i=0;i<9;i++){g.fillStyle=i%2?'#1c6b38':'#217a40';g.fillRect(X0+i*80,Y0,80,Y1-Y0)}
+ g.strokeStyle='#ffffffcc';g.lineWidth=2;g.strokeRect(X0,Y0,X1-X0,Y1-Y0);g.beginPath();g.moveTo(400,Y0);g.lineTo(400,Y1);g.stroke();
+ g.beginPath();g.arc(400,CY,55,0,7);g.stroke();g.strokeRect(X0,CY-90,90,180);g.strokeRect(X1-90,CY-90,90,180);
+ g.fillStyle='#ffffff30';g.fillRect(X0-24,GA,24,GB-GA);g.fillRect(X1,GA,24,GB-GA);g.strokeStyle='#fff';g.strokeRect(X0-24,GA,24,GB-GA);g.strokeRect(X1,GA,24,GB-GA);
+ pl(km,16,'#111','#f2c230');pl(ka,16,'#111','#2a9d8f');pl(ai,14,'#2a9d8f','#fff');pl(me,14,'#f2c230','#0d0d0d');
+ g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=2;g.beginPath();g.arc(ball.x,ball.y,8,0,7);g.fill();g.stroke();
+ g.textAlign='center';g.fillStyle='#f2c230';g.font='bold 26px "Arial Black",Impact,sans-serif';
+ g.fillText(`${sc[0]}  -  ${sc[1]}`,400,38);g.font='bold 13px sans-serif';g.fillStyle='#fff';g.fillText(Math.min(90,Math.floor(clk))+"'",400,54);
+ g.textAlign='left';g.fillText(S.mtaa||'YOU',24,38);g.textAlign='right';g.fillText('CPU',776,38);
+ g.fillStyle='#ffffff30';g.fillRect(24,46,90,5);g.fillStyle='#f2c230';g.fillRect(24,46,90*me.st,5);
+ if(pause>0&&pause>1.2){g.textAlign='center';g.fillStyle='#f2c230';g.font='bold 60px "Arial Black",Impact,sans-serif';g.fillText('GOAL!',400,CY+20)}
+}
+let last=0;function loop(t){const dt=Math.min(.033,(t-last)/1000||0);last=t;tt+=dt;if(st=='play')step(dt);draw();requestAnimationFrame(loop)}
+function lbl(){$('bs').textContent=tr('sh');$('br').textContent=tr('ru')}
+function board(){const e=Object.entries(S.board).sort((a,b)=>b[1]-a[1]).slice(0,5);if(!e.length)return '';
+ return `<h2>${tr('lb')}</h2><ol>${e.map(([n,p])=>`<li class="${n==S.mtaa?'me':''}"><span>${n.replace(/[<>&"]/g,'')}</span><span>${p} ${tr('pts')}</span></li>`).join('')}</ol>`}
+function pick(){st='menu';ui.style.display='flex';ui.dir='ltr';ui.innerHTML='<h2>CHOOSE YOUR LANGUAGE</h2>'+Object.keys(LN).map(k=>`<button class="b" data-l="${k}">${LN[k]}</button>`).join('');
+ ui.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{S.lang=b.dataset.l;save();menu()})}
+function menu(){st='menu';lbl();ui.style.display='flex';ui.dir=S.lang=='ar'?'rtl':'ltr';
+ ui.innerHTML=`<h1>${tr('t')}</h1><input id="mn" maxlength="16" placeholder="${tr('mt')}" value="${(S.mtaa||'').replace(/"/g,'')}"><button class="b" id="go">${tr('play')}</button><p class="s">${tr('hint')}</p>${board()}<div><button class="b2" id="lg">🌐 ${tr('lang')}</button><button class="b2" id="vo">🔊 ${S.voice?'ON':'OFF'}</button></div>`;
+ $('go').onclick=()=>{S.mtaa=$('mn').value.trim()||tr('ex');save();start()};$('lg').onclick=pick;
+ $('vo').onclick=()=>{S.voice=S.voice?0:1;save();menu()}}
+function start(){ui.style.display='none';sc=[0,0];clk=0;half=0;pause=0;kick0();st='play';say('ko')}
+function finish(){st='end';const r=sc[0]>sc[1]?'w':sc[0]<sc[1]?'l':'d';say(r);
+ S.board[S.mtaa]=(S.board[S.mtaa]||0)+(r=='w'?3:r=='d'?1:0);save();
+ const msg=`${tr('t')}: ${S.mtaa} ${sc[0]}-${sc[1]} CPU. ${location.href}`;
+ ui.style.display='flex';ui.innerHTML=`<h1>${sc[0]} - ${sc[1]}</h1><h2>${tr(r)}</h2>${board()}<a class="b" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">${tr('wa')}</a><div><button class="b2" id="ag">${tr('ag')}</button><button class="b2" id="lg">🌐 ${tr('lang')}</button></div>`;
+ $('ag').onclick=start;$('lg').onclick=pick}
+kick0();requestAnimationFrame(loop);S.lang?menu():pick();
+</script></body></html>
